@@ -73,17 +73,20 @@ export default function AdminLayout({
 
         {/* Sidebar */}
         <aside
-          className={`w-64 sm:w-72 bg-gray-900 text-white min-h-screen fixed left-0 top-0 z-40 transform transition-transform duration-300 ease-in-out ${
+          className={`w-64 sm:w-72 bg-gray-900 text-white h-screen fixed left-0 top-0 z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
-          <div className="p-4 sm:p-6 border-b border-gray-800">
+          {/* Header */}
+          <div className="p-4 sm:p-6 border-b border-gray-800 flex-shrink-0">
             <h1 className="text-xl sm:text-2xl font-bold mb-2">Admin Panel</h1>
             {user && (
               <p className="text-xs sm:text-sm text-gray-400 truncate">{user.email || user.name}</p>
             )}
           </div>
-          <nav className="mt-4 sm:mt-8 overflow-y-auto flex-1">
+          
+          {/* Navigation - Scrollable */}
+          <nav className="flex-1 overflow-y-auto mt-4 sm:mt-8 pb-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -102,23 +105,25 @@ export default function AdminLayout({
               );
             })}
           </nav>
-          <div className="absolute bottom-0 w-full p-4 sm:p-6 border-t border-gray-800 space-y-2 bg-gray-900">
+          
+          {/* Footer - Always Visible */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-800 space-y-2 bg-gray-900">
             <Link
               href="/"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg"
+              className="flex items-center justify-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg text-sm sm:text-base"
             >
-              <span className="text-sm sm:text-base">Back to Site</span>
+              <span>Back to Site</span>
             </Link>
             <button
               onClick={() => {
                 handleLogout();
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full flex items-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg"
+              className="w-full flex items-center justify-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg text-sm sm:text-base"
             >
-              <LogOut className="w-5 h-5 mr-3 flex-shrink-0" />
-              <span className="text-sm sm:text-base">Logout</span>
+              <LogOut className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span>Logout</span>
             </button>
           </div>
         </aside>

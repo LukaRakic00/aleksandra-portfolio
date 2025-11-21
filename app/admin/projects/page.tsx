@@ -44,6 +44,7 @@ function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; 
     transition,
     isDragging,
   } = useSortable({ id: project._id });
+  const [isPressing, setIsPressing] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -55,15 +56,31 @@ function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; 
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-transparent hover:border-blue-300 transition-all"
+      className={`bg-white rounded-lg shadow-md overflow-hidden border-2 transition-all ${
+        isDragging ? 'border-blue-500 shadow-xl z-50 scale-105' : 'border-transparent hover:border-blue-300'
+      }`}
     >
       <div className="flex items-center gap-3 p-4">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+          onTouchStart={() => setIsPressing(true)}
+          onTouchEnd={() => setIsPressing(false)}
+          onMouseDown={() => setIsPressing(true)}
+          onMouseUp={() => setIsPressing(false)}
+          onMouseLeave={() => setIsPressing(false)}
+          className={`relative cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-all touch-none select-none ${
+            isPressing ? 'scale-110' : ''
+          }`}
+          style={{ touchAction: 'none' }}
+          title="Hold and drag to reorder (mobile)"
         >
           <GripVertical className="w-5 h-5" />
+          {isPressing && (
+            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+              Hold to drag
+            </div>
+          )}
         </div>
         <div className="relative h-24 w-24 bg-gray-200 flex-shrink-0 rounded">
           <img
@@ -108,8 +125,14 @@ export default function AdminProjects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
+  // Long press for mobile, immediate for desktop
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 250, // Long press delay for mobile
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

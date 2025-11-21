@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Tag, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, Mail } from 'lucide-react';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -24,9 +24,22 @@ interface Project {
 
 export default function ProjectDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleGetInTouch = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/');
+    // Wait for navigation then scroll
+    setTimeout(() => {
+      const contactSection = document.getElementById('contact');
+      if (contactSection) {
+        contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -212,13 +225,13 @@ export default function ProjectDetailsPage() {
                   <ArrowLeft className="w-5 h-5" />
                   View All Projects
                 </Link>
-                <Link
-                  href="/#contact"
-                  className="inline-flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                <button
+                  onClick={handleGetInTouch}
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-md hover:shadow-lg"
                 >
-                  <ExternalLink className="w-5 h-5" />
+                  <Mail className="w-5 h-5" />
                   Get In Touch
-                </Link>
+                </button>
               </motion.div>
             </div>
           </motion.div>
