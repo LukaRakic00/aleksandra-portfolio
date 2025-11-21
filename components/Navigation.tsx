@@ -19,27 +19,44 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Prevent body scroll when mobile menu is open
+  // Prevent body scroll when mobile menu is open (smooth, no jump)
   useEffect(() => {
     if (isMobileMenuOpen) {
-      // Save current scroll position
+      // Save scroll position first
       const scrollY = window.scrollY;
-      // Prevent scroll
+      // Apply styles synchronously to prevent jump
+      document.documentElement.style.scrollBehavior = 'auto';
+      document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
     } else {
-      // Restore scroll
+      // Restore scroll smoothly
       const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.width = '';
-      document.body.style.overflow = '';
+      document.documentElement.style.scrollBehavior = '';
       if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        window.scrollTo({ top: parseInt(scrollY || '0') * -1, behavior: 'auto' });
       }
     }
+    
+    return () => {
+      // Cleanup on unmount
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.documentElement.style.scrollBehavior = '';
+    };
   }, [isMobileMenuOpen]);
 
   const navItems = [
@@ -144,15 +161,16 @@ export default function Navigation() {
 
             {/* Bottom Sheet */}
             <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
               transition={{ 
                 type: 'spring',
-                damping: 30,
-                stiffness: 400,
-                mass: 0.8
+                damping: 40,
+                stiffness: 600,
+                mass: 0.6
               }}
+              style={{ willChange: 'transform' }}
               className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white rounded-t-3xl shadow-2xl border-t border-gray-200 max-h-[85vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
