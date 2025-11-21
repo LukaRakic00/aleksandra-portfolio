@@ -14,9 +14,33 @@ export default function Navigation() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      // Prevent scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore scroll
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    }
+  }, [isMobileMenuOpen]);
 
   const navItems = [
     { href: '#home', label: 'Home', icon: Home },
@@ -82,11 +106,11 @@ export default function Navigation() {
             className="md:hidden relative z-50 text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
           >
             <motion.div
-              animate={isMobileMenuOpen ? { rotate: 90 } : { rotate: 0 }}
-              transition={{ duration: 0.3 }}
+              animate={isMobileMenuOpen ? { rotate: 180, scale: 1.1 } : { rotate: 0, scale: 1 }}
+              transition={{ duration: 0.3, type: 'spring' }}
             >
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -98,35 +122,48 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Mobile Menu - Side Panel like Admin */}
+      {/* Mobile Menu - Bottom Sheet Style */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Overlay */}
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
               onClick={() => setIsMobileMenuOpen(false)}
+              onTouchStart={(e) => {
+                // Only close if touch starts on backdrop, not on the sheet
+                if (e.target === e.currentTarget) {
+                  setIsMobileMenuOpen(false);
+                }
+              }}
             />
 
-            {/* Side Panel */}
-            <motion.aside
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+            {/* Bottom Sheet */}
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
               transition={{ 
                 type: 'spring',
                 damping: 30,
-                stiffness: 300
+                stiffness: 400,
+                mass: 0.8
               }}
-              className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gradient-to-br from-white via-blue-50/50 to-purple-50/50 backdrop-blur-xl shadow-2xl z-50 md:hidden flex flex-col border-l border-white/20"
+              className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white rounded-t-3xl shadow-2xl border-t border-gray-200 max-h-[85vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
+              {/* Drag Handle */}
+              <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+              </div>
+
               {/* Header */}
-              <div className="p-6 border-b border-gray-200/50 bg-white/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
+              <div className="flex-shrink-0 px-6 pb-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-30"></div>
@@ -134,82 +171,77 @@ export default function Navigation() {
                         <Image
                           src="/approved.png"
                           alt="Logo"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 object-contain"
+                          width={28}
+                          height={28}
+                          className="w-7 h-7 object-contain"
                         />
                       </div>
                     </div>
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      Menu
+                    <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Navigation
                     </h2>
                   </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                     aria-label="Close menu"
                   >
-                    <X className="w-6 h-6 text-gray-700" />
+                    <X className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Navigate through sections
-                </p>
               </div>
 
-              {/* Menu Items */}
-              <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                {navItems.map((item, index) => {
-                  const Icon = item.icon;
-                  return (
-                    <motion.a
-                      key={item.href}
-                      href={item.href}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ 
-                        delay: index * 0.05,
-                        type: 'spring',
-                        damping: 25
-                      }}
-                      className="group flex items-center gap-4 px-4 py-4 rounded-xl text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium relative overflow-hidden"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {/* Background gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      
-                      {/* Icon */}
-                      <div className="relative z-10 w-12 h-12 bg-gray-100 group-hover:bg-white/20 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110">
-                        <Icon className="w-6 h-6 group-hover:text-white transition-colors" />
-                      </div>
-                      
-                      {/* Label */}
-                      <span className="relative z-10 flex-1 group-hover:text-white transition-colors">
-                        {item.label}
-                      </span>
-                      
-                      {/* Arrow */}
-                      <motion.div
-                        className="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        whileHover={{ x: 3 }}
+              {/* Menu Items - Scrollable Container */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <nav 
+                  className="h-full overflow-y-auto overscroll-contain px-4 py-4 space-y-2"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {navItems.map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <motion.a
+                        key={item.href}
+                        href={item.href}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ 
+                          delay: index * 0.05,
+                          type: 'spring',
+                          damping: 20
+                        }}
+                        className="group flex items-center gap-3 px-4 py-4 rounded-2xl text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 transition-all duration-300 font-medium relative overflow-hidden active:scale-[0.98]"
+                        onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </motion.div>
-                    </motion.a>
-                  );
-                })}
-              </nav>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-gray-200/50 bg-white/50 backdrop-blur-sm">
-                <p className="text-xs text-center text-gray-500">
-                  Tap outside to close
-                </p>
+                        {/* Background gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
+                        
+                        {/* Icon */}
+                        <div className="relative z-10 w-11 h-11 bg-gradient-to-br from-blue-50 to-purple-50 group-hover:from-blue-600 group-hover:to-purple-600 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0">
+                          <Icon className="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" />
+                        </div>
+                        
+                        {/* Label */}
+                        <span className="relative z-10 flex-1 text-base group-hover:text-white transition-colors">
+                          {item.label}
+                        </span>
+                        
+                        {/* Arrow */}
+                        <motion.div
+                          className="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          whileHover={{ x: 3 }}
+                        >
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </motion.div>
+                      </motion.a>
+                    );
+                  })}
+                </nav>
               </div>
-            </motion.aside>
+            </motion.div>
           </>
         )}
       </AnimatePresence>

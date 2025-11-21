@@ -35,7 +35,31 @@ interface Project {
   order: number;
 }
 
-function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; onEdit: (project: Project) => void; onDelete: (id: string) => void }) {
+function SortableProjectItem({ 
+  project, 
+  onEdit, 
+  onDelete, 
+  onOrderChange,
+  isDraggable = true
+}: { 
+  project: Project; 
+  onEdit: (project: Project) => void; 
+  onDelete: (id: string) => void;
+  onOrderChange: (id: string, newOrder: number) => void;
+  isDraggable?: boolean;
+}) {
+  const sortable = useSortable({ id: project._id, disabled: !isDraggable });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const {
     attributes,
     listeners,
@@ -43,14 +67,20 @@ function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: project._id });
-  const [isPressing, setIsPressing] = useState(false);
+  } = isDraggable ? sortable : {
+    attributes: {},
+    listeners: {},
+    setNodeRef: (node: any) => {},
+    transform: null,
+    transition: undefined,
+    isDragging: false,
+  };
 
-  const style = {
+  const style = isDraggable ? {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
+  } : {};
 
   return (
     <div
@@ -61,27 +91,31 @@ function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; 
       }`}
     >
       <div className="flex items-center gap-3 p-4">
-        <div
-          {...attributes}
-          {...listeners}
-          onTouchStart={() => setIsPressing(true)}
-          onTouchEnd={() => setIsPressing(false)}
-          onMouseDown={() => setIsPressing(true)}
-          onMouseUp={() => setIsPressing(false)}
-          onMouseLeave={() => setIsPressing(false)}
-          className={`relative cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-all touch-none select-none ${
-            isPressing ? 'scale-110' : ''
-          }`}
-          style={{ touchAction: 'none' }}
-          title="Hold and drag to reorder (mobile)"
-        >
-          <GripVertical className="w-5 h-5" />
-          {isPressing && (
-            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
-              Hold to drag
-            </div>
-          )}
-        </div>
+        {/* Desktop: Drag Handle, Mobile: Order Input */}
+        {isMobile ? (
+          <div className="flex flex-col items-center gap-1">
+            <label className="text-xs text-gray-500">Order</label>
+            <input
+              type="number"
+              value={project.order}
+              onChange={(e) => {
+                const newOrder = parseInt(e.target.value) || 0;
+                onOrderChange(project._id, newOrder);
+              }}
+              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="0"
+            />
+          </div>
+        ) : (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+            title="Drag to reorder"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        )}
         <div className="relative h-24 w-24 bg-gray-200 flex-shrink-0 rounded">
           <img
             src={project.imageUrl}
@@ -125,13 +159,22 @@ export default function AdminProjects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  // Long press for mobile, immediate for desktop
+  // Desktop: immediate drag, Mobile: disabled (using manual order input)
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        delay: 250, // Long press delay for mobile
-        tolerance: 5,
-      },
+      // No delay for desktop - immediate drag
+      activationConstraint: isMobile ? { distance: 999 } : undefined, // Disable drag on mobile
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -236,6 +279,36 @@ export default function AdminProjects() {
     fetchProjects();
   };
 
+  const handleOrderChange = async (id: string, newOrder: number) => {
+    // Update local state immediately
+    const updatedProjects = projects.map((p) =>
+      p._id === id ? { ...p, order: newOrder } : p
+    );
+    setProjects(updatedProjects);
+
+    // Update in database
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: newOrder }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Re-fetch to get updated order
+        fetchProjects();
+        toast.success('Order updated');
+      } else {
+        toast.error('Error updating order');
+        fetchProjects(); // Revert
+      }
+    } catch (error) {
+      toast.error('Error updating order');
+      fetchProjects(); // Revert
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -258,27 +331,46 @@ export default function AdminProjects() {
           </button>
         </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={projects.map((p) => p._id)}
-            strategy={verticalListSortingStrategy}
+        {isMobile ? (
+          // Mobile: Manual order input (no drag and drop)
+          <div className="space-y-3">
+            {projects.map((project) => (
+              <SortableProjectItem
+                key={project._id}
+                project={project}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onOrderChange={handleOrderChange}
+                isDraggable={false}
+              />
+            ))}
+          </div>
+        ) : (
+          // Desktop: Drag and drop
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <div className="space-y-3">
-              {projects.map((project) => (
-                <SortableProjectItem
-                  key={project._id}
-                  project={project}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={projects.map((p) => p._id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3">
+                {projects.map((project) => (
+                  <SortableProjectItem
+                    key={project._id}
+                    project={project}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onOrderChange={handleOrderChange}
+                    isDraggable={true}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
 
         {projects.length === 0 && (
           <div className="text-center py-12 text-gray-500">

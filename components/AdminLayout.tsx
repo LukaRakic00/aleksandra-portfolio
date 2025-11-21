@@ -104,28 +104,31 @@ export default function AdminLayout({
                 </Link>
               );
             })}
-          </nav>
-          
-          {/* Footer - Always Visible */}
-          <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-800 space-y-2 bg-gray-900">
+            
+            {/* Divider */}
+            <div className="my-2 mx-4 sm:mx-6 border-t border-gray-800"></div>
+            
+            {/* Back to Site */}
             <Link
               href="/"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center justify-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg text-sm sm:text-base"
+              className="flex items-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
-              <span>Back to Site</span>
+              <span className="text-sm sm:text-base">Back to Site</span>
             </Link>
+            
+            {/* Logout */}
             <button
               onClick={() => {
                 handleLogout();
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded-lg text-sm sm:text-base"
+              className="w-full flex items-center px-4 sm:px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
-              <LogOut className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span>Logout</span>
+              <LogOut className="w-5 h-5 mr-3 flex-shrink-0" />
+              <span className="text-sm sm:text-base">Logout</span>
             </button>
-          </div>
+          </nav>
         </aside>
 
         {/* Overlay for mobile */}
