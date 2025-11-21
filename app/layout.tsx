@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="sr">
-      <body>
+    <html lang="sr" className="overflow-x-hidden">
+      <body className="overflow-x-hidden w-full max-w-full">
         {children}
         <Toaster position="top-right" />
       </body>

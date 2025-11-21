@@ -20,12 +20,10 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const body = await request.json();
     
-    // Validate Cloudinary URL if imageUrl is provided
+    // Warn if imageUrl is not from Cloudinary (but don't block - allow for flexibility)
     if (body.imageUrl && !body.imageUrl.includes('res.cloudinary.com') && !body.imageUrl.includes('via.placeholder.com')) {
-      return NextResponse.json(
-        { success: false, error: 'Image URL must be from Cloudinary' },
-        { status: 400 }
-      );
+      console.warn('Image URL is not from Cloudinary:', body.imageUrl);
+      // Don't block, just log a warning - images should be uploaded via /api/upload
     }
     
     const project = await Project.create(body);

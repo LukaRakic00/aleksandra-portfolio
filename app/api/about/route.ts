@@ -43,10 +43,14 @@ export async function PUT(request: NextRequest) {
     
     // Validate Cloudinary URL if profileImage is provided (allow placeholder for testing)
     if (body.profileImage && !body.profileImage.includes('res.cloudinary.com') && !body.profileImage.includes('via.placeholder.com') && !body.profileImage.includes('images.unsplash.com')) {
-      return NextResponse.json(
-        { success: false, error: 'Profile image URL must be from Cloudinary' },
-        { status: 400 }
-      );
+      console.warn('Profile image URL is not from Cloudinary:', body.profileImage);
+      // Don't block, just log a warning
+    }
+    
+    // Validate Cloudinary URL if heroImage is provided (allow placeholder for testing)
+    if (body.heroImage && !body.heroImage.includes('res.cloudinary.com') && !body.heroImage.includes('via.placeholder.com') && !body.heroImage.includes('images.unsplash.com')) {
+      console.warn('Hero image URL is not from Cloudinary:', body.heroImage);
+      // Don't block, just log a warning
     }
     
     let about = await About.findOne();

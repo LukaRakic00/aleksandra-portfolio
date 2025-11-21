@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface Project {
   _id: string;
@@ -12,6 +13,7 @@ interface Project {
   category: string;
   tags: string[];
   featured: boolean;
+  order?: number;
 }
 
 export default function Projects() {
@@ -23,7 +25,13 @@ export default function Projects() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setProjects(data.data);
+          // Sort projects by order
+          const sortedProjects = [...data.data].sort((a: Project, b: Project) => {
+            const aOrder = a.order ?? 999;
+            const bOrder = b.order ?? 999;
+            return aOrder - bOrder;
+          });
+          setProjects(sortedProjects);
         }
       });
   }, []);
@@ -32,16 +40,18 @@ export default function Projects() {
     .map((p) => p.category)
     .filter((category, index, self) => self.indexOf(category) === index);
   const categories = ['All', ...uniqueCategories];
+  
   const filteredProjects =
     filter === 'All'
       ? projects
       : projects.filter((p) => p.category === filter);
 
-  const featuredProjects = projects.filter((p) => p.featured);
+  // Show first 2 projects as featured (top projects by order)
+  const featuredProjects = projects.slice(0, 2);
 
   return (
-    <section id="projects" className="py-12 sm:py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="projects" className="py-12 sm:py-20 bg-gradient-to-br from-gray-50 to-blue-50 w-full max-w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -101,10 +111,13 @@ export default function Projects() {
                       ))}
                     </div>
                     <div className="flex gap-4">
-                      <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                      <Link
+                        href={`/projects/${project._id}`}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
                         <ExternalLink className="w-4 h-4" />
                         View Project
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>
@@ -168,9 +181,12 @@ export default function Projects() {
                     </span>
                   ))}
                 </div>
-                <button className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                <Link
+                  href={`/projects/${project._id}`}
+                  className="block w-full text-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
                   View Details
-                </button>
+                </Link>
               </div>
             </motion.div>
           ))}

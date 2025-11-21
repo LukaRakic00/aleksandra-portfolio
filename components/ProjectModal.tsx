@@ -212,35 +212,21 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
             />
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.featured}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    featured: e.target.checked,
-                  }))
-                }
-                className="w-4 h-4"
-              />
-              <span>Featured</span>
-            </label>
-            <div>
-              <label className="block text-sm font-medium mb-1">Order</label>
-              <input
-                type="number"
-                value={formData.order}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    order: parseInt(e.target.value) || 0,
-                  }))
-                }
-                className="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Order (automatically set by drag & drop)</label>
+            <input
+              type="number"
+              value={formData.order}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  order: parseInt(e.target.value) || 0,
+                }))
+              }
+              className="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled
+              title="Order is managed by drag & drop on the projects page"
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">

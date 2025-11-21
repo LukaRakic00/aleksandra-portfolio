@@ -2,9 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ProjectModal from '@/components/ProjectModal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Project {
   _id: string;
@@ -18,11 +35,85 @@ interface Project {
   order: number;
 }
 
+function SortableProjectItem({ project, onEdit, onDelete }: { project: Project; onEdit: (project: Project) => void; onDelete: (id: string) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: project._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white rounded-lg shadow-md overflow-hidden border-2 border-transparent hover:border-blue-300 transition-all"
+    >
+      <div className="flex items-center gap-3 p-4">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <GripVertical className="w-5 h-5" />
+        </div>
+        <div className="relative h-24 w-24 bg-gray-200 flex-shrink-0 rounded">
+          <img
+            src={project.imageUrl}
+            alt={project.title}
+            className="w-full h-full object-cover rounded"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-lg mb-1 truncate">{project.title}</h3>
+          <p className="text-gray-600 text-sm mb-1 line-clamp-1">
+            {project.description}
+          </p>
+          <p className="text-xs text-gray-500">
+            Category: {project.category} | Order: {project.order}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={() => onEdit(project)}
+            className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(project._id)}
+            className="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchProjects();
@@ -33,18 +124,64 @@ export default function AdminProjects() {
       const res = await fetch('/api/projects');
       const data = await res.json();
       if (data.success) {
-        // Ensure all projects have tags array
+        // Ensure all projects have tags array and sort by order
         const projectsWithTags = data.data.map((project: any) => ({
           ...project,
           tags: project.tags || [],
           longDescription: project.longDescription || '',
         }));
-        setProjects(projectsWithTags);
+        // Sort by order, then by creation date
+        const sortedProjects = projectsWithTags.sort((a: any, b: any) => {
+          if (a.order !== b.order) {
+            return a.order - b.order;
+          }
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
+        setProjects(sortedProjects);
       }
     } catch (error) {
       toast.error('Error fetching projects');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = projects.findIndex((p) => p._id === active.id);
+    const newIndex = projects.findIndex((p) => p._id === over.id);
+
+    const newProjects = arrayMove(projects, oldIndex, newIndex);
+    setProjects(newProjects);
+
+    // Update order in database
+    try {
+      const projectIds = newProjects.map((p) => p._id);
+      const res = await fetch('/api/projects/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectIds }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Order updated successfully');
+      } else {
+        toast.error('Error updating order');
+        // Revert on error
+        fetchProjects();
+      }
+    } catch (error) {
+      toast.error('Error updating order');
+      // Revert on error
+      fetchProjects();
     }
   };
 
@@ -98,52 +235,27 @@ export default function AdminProjects() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {projects.map((project) => (
-            <div
-              key={project._id}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
-            >
-              <div className="relative h-48 bg-gray-200">
-                <img
-                  src={project.imageUrl}
-                  alt={project.title}
-                  className="w-full h-full object-cover"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={projects.map((p) => p._id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {projects.map((project) => (
+                <SortableProjectItem
+                  key={project._id}
+                  project={project}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
-                {project.featured && (
-                  <span className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold">
-                    Featured
-                  </span>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-lg mb-2">{project.title}</h3>
-                <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-                  {project.description}
-                </p>
-                <p className="text-xs text-gray-500 mb-4">
-                  Category: {project.category}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(project)}
-                    className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(project._id)}
-                    className="flex-1 bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
 
         {projects.length === 0 && (
           <div className="text-center py-12 text-gray-500">

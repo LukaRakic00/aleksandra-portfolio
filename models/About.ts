@@ -9,6 +9,7 @@ export interface IAbout extends Document {
   phone?: string;
   location?: string;
   profileImage: string;
+  heroImage?: string;
   resumeUrl?: string;
   socialLinks: {
     linkedin?: string;
@@ -67,6 +68,9 @@ const AboutSchema: Schema = new Schema(
     profileImage: {
       type: String,
       required: true,
+    },
+    heroImage: {
+      type: String,
     },
     resumeUrl: {
       type: String,

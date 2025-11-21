@@ -1,11 +1,33 @@
 'use client';
 
-import { Linkedin, Github, Mail } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Linkedin, Mail } from 'lucide-react';
 
 export default function Footer() {
+  const [socialLinks, setSocialLinks] = useState<{
+    linkedin?: string;
+    email?: string;
+  }>({});
+
+  useEffect(() => {
+    fetch('/api/about')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          setSocialLinks({
+            linkedin: data.data.socialLinks?.linkedin,
+            email: data.data.email,
+          });
+        }
+      })
+      .catch(() => {
+        // Silently fail if API is not available
+      });
+  }, []);
+
   return (
-    <footer className="bg-gray-900 text-white py-8 sm:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-gray-900 text-white py-8 sm:py-12 w-full max-w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Portfolio</h3>
@@ -42,25 +64,26 @@ export default function Footer() {
           <div>
             <h4 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Connect</h4>
             <div className="flex gap-4">
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg"
-                title="LinkedIn Profile"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors"
-              >
-                <Github className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-purple-600 transition-colors"
-              >
-                <Mail className="w-5 h-5" />
-              </a>
+              {socialLinks.linkedin && (
+                <a
+                  href={socialLinks.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg"
+                  title="LinkedIn Profile"
+                >
+                  <Linkedin className="w-5 h-5" />
+                </a>
+              )}
+              {socialLinks.email && (
+                <a
+                  href={`mailto:${socialLinks.email}`}
+                  className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-purple-600 transition-colors"
+                  title="Send Email"
+                >
+                  <Mail className="w-5 h-5" />
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ interface AboutData {
   phone: string;
   location: string;
   profileImage: string;
+  heroImage?: string;
   resumeUrl: string;
   socialLinks: {
     linkedin?: string;
@@ -45,6 +46,7 @@ export default function AdminAbout() {
     phone: '',
     location: '',
     profileImage: '',
+    heroImage: '',
     resumeUrl: '',
     socialLinks: {},
     skills: [],
@@ -53,6 +55,7 @@ export default function AdminAbout() {
   });
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
 
   useEffect(() => {
     fetchAbout();
@@ -72,11 +75,16 @@ export default function AdminAbout() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'hero' = 'profile') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
+    if (type === 'profile') {
+      setUploading(true);
+    } else {
+      setUploadingHero(true);
+    }
+
     const formDataUpload = new FormData();
     formDataUpload.append('file', file);
 
@@ -87,7 +95,11 @@ export default function AdminAbout() {
       });
       const data = await res.json();
       if (data.success) {
-        setFormData((prev) => ({ ...prev, profileImage: data.data.url }));
+        if (type === 'profile') {
+          setFormData((prev) => ({ ...prev, profileImage: data.data.url }));
+        } else {
+          setFormData((prev) => ({ ...prev, heroImage: data.data.url }));
+        }
         toast.success('Image uploaded successfully');
       } else {
         toast.error('Error uploading image');
@@ -95,7 +107,11 @@ export default function AdminAbout() {
     } catch (error) {
       toast.error('Error uploading image');
     } finally {
-      setUploading(false);
+      if (type === 'profile') {
+        setUploading(false);
+      } else {
+        setUploadingHero(false);
+      }
     }
   };
 
@@ -185,27 +201,52 @@ export default function AdminAbout() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Profile Image</label>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              {formData.profileImage && (
-                <img
-                  src={formData.profileImage}
-                  alt="Profile"
-                  className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg flex-shrink-0"
-                />
-              )}
-              <label className="cursor-pointer bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center">
-                <Upload className="w-4 h-4" />
-                <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Profile Image (About Section)</label>
+              <div className="flex flex-col gap-4">
+                {formData.profileImage && (
+                  <img
+                    src={formData.profileImage}
+                    alt="Profile"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                )}
+                <label className="cursor-pointer bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 justify-center">
+                  <Upload className="w-4 h-4" />
+                  <span>{uploading ? 'Uploading...' : 'Upload Profile Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, 'profile')}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Hero Image (Hero Section)</label>
+              <div className="flex flex-col gap-4">
+                {formData.heroImage && (
+                  <img
+                    src={formData.heroImage}
+                    alt="Hero"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                )}
+                <label className="cursor-pointer bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 justify-center">
+                  <Upload className="w-4 h-4" />
+                  <span>{uploadingHero ? 'Uploading...' : 'Upload Hero Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, 'hero')}
+                    className="hidden"
+                    disabled={uploadingHero}
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -259,6 +300,66 @@ export default function AdminAbout() {
               }
               className="w-full px-4 py-2 border rounded-lg"
             />
+          </div>
+
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-bold mb-4">Social Links</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label className="block text-sm font-medium mb-1">LinkedIn URL</label>
+                <input
+                  type="url"
+                  value={formData.socialLinks?.linkedin || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      socialLinks: {
+                        ...prev.socialLinks,
+                        linkedin: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="https://linkedin.com/in/yourprofile"
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Twitter URL</label>
+                <input
+                  type="url"
+                  value={formData.socialLinks?.twitter || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      socialLinks: {
+                        ...prev.socialLinks,
+                        twitter: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="https://twitter.com/yourprofile"
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Instagram URL</label>
+                <input
+                  type="url"
+                  value={formData.socialLinks?.instagram || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      socialLinks: {
+                        ...prev.socialLinks,
+                        instagram: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="https://instagram.com/yourprofile"
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
           </div>
 
           <button
