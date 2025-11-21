@@ -19,12 +19,18 @@ export async function GET() {
         skills: ['Marketing Strategy', 'Talent Acquisition', 'Employer Branding'],
         experience: [],
         education: [],
+        socialLinks: {},
       });
     }
     return NextResponse.json({ success: true, data: about });
   } catch (error: any) {
+    console.error('Error in GET /api/about:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { 
+        success: false, 
+        error: error.message || 'Failed to fetch about data',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }

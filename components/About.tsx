@@ -9,11 +9,21 @@ export default function About() {
 
   useEffect(() => {
     fetch('/api/about')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data.success) {
           setAboutData(data.data);
+        } else {
+          console.error('Error fetching about data:', data.error);
         }
+      })
+      .catch((error) => {
+        console.error('Error fetching about data:', error);
       });
   }, []);
 
